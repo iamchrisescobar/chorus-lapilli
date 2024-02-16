@@ -41,3 +41,11 @@ Technical Components:
 
   - User Interface:
     Provides feedback to the players about the current game state, including whose turn it is, if a player has won, or if the game is a draw.
+
+Useful Files:
+  - tic-tac-toe.txt:
+    This file contains a detailed explanation of how to build a tic-tac-toe game using React. It include a detailed explanation of each step taken.
+  - chorus-lapilli.txt:
+    This file contains a detailed explanation of how to turn regular tic-tac-toe into the chorus-lapilli variation ( 3 pieces per player).
+  - test_chorus_lapilli.py:
+    A python script used to test game logic and correct game behavior. Tests can be added to this file.
