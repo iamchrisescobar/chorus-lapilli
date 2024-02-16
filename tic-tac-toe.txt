@@ -1,0 +1,131 @@
+Building a Tic-Tac-Toe game using React by Christian Escobar 2/10/24
+TUTORIAL: https://react.dev/learn/tutorial-tic-tac-toe
+Setting up the environment:
+    In order to start working on this project, I made sure node.js and npm are installed in my local machine
+    after doing that, I downloaded the source file from codeSandBox. However, I had trouble unzipping this file
+    so I downloaded 7-Zip to be able to extract the files. After that, I moved this folder to my deseried location.
+    I opened VS Code, used cd to move to the directory. Once there, I used commands npm install followed by npm start
+    to isntall the necessary files, and start the application (show it on the desired browser)
+
+Making changes to App.js:
+    Displaying a 3x3 grid:
+    After the set up is complete, you will notice a square with an X inside of it. Now we need to display a grid instead 
+    To do so, we could copy the button component 9 times. However, the return statement needs a single component
+    to work around this, we will group everything inside of <> and </> and each row (3 buttons) will be grouped
+    inside 3 different <div className="board-row></div>. the className linkes the divs to the CSS that formats it
+    Now we may change the name of the component from "square" to "board"
+
+    Updating the values of squares on-click:
+    React allows you to reuse components avoiding duplicate code (else, you would have to copy paste the logic for each square)
+    we do this defining a Square function that takes in a prop "value", and updating the content of the divs so that
+    they include 3 Square components like so: <Square value="desired number"/>
+    After doing that, we add a handleClick function which uses console.log('message'); to display a message everytime a button
+    is clicked. If you are using Chrome, you can do Ctrl + Shift + J to view the console
+    Now we want to display an 'X' on the clicked squares. we do this by sing states to "remember" the value of the square
+    We want to store the current value of the Square in state and change it when its clicked. We can use react's useState function
+    to do that, we first import useState by adding import { useState } from 'react'; at the beginning of App.js
+    We also need to remove the value prop from the Square function and add a new line at the start of Square that calls useState
+    and have it return a state variable called 'value'. Like so: const [value, setValue] = useState(null);
+    'value' stores the value and setValue is a function that can be used to change the value. 'value' is first initialied to null
+    Additionally, since the Square components do not take in a prop, we may delete that and have divs with 3 <Square /> components
+    Now we should have an empty grid. In order to display an 'X' when a Square is clicked, we may change the line
+    console.log("message"); to setValue('X'); this tells react to re-render the single Square when clicked.
+
+    Storing the board's state:
+    we will store the game's state in the parent Board components instead of in each Square
+    The Board component can then tell each square what to display via a prop. We accomplish this by adding a state variable named
+    'squares' that starts out with a an array of 9 elements which are all null
+    We add this to the top of the Board function body -> const [squares, setSquares] = useState(Array(9).fill(null));
+    We also need to update the Square function to take in a prop 'value' and have it return a button, like so:
+    return <button className='square'>{value}</button>
+
+    Changing on-Click behaviour:
+    The Board component now knows which squares are filled. Now we need for the Square to update the Board's state when clicked.
+    However, since the state is private to a component that defines it, we cannot update Board's state from Square.
+    Instead, we need to pass down a function from the Board component to the Square component, and have Square call that function when clicked.
+    Lets start with the Square's function 'onSquareClick'. We update Square so that it returns
+        <button className='square' onClick={onSquareClick}>
+            {value}
+        </button>
+    And we add the onSquareClick function to the Square component's props: function Square({value, onSquareClick})
+    To use this function from the Board's component, we will add the onSquareClick prop to each Square component inside of Board
+    and we will define it as handleClick (a function of Board). This function is the one that updates the board.
+    Lastly, we define the handleClick function inside of Board. This function will update the squares array that holds the board's state
+    function handleClick() {
+        const nextSquares = squares.slice();
+        nextSquares[0] = "X";
+        setSquares(nextSquares);
+    } 
+    Note: - the .slice() method creates a copy of the current Board state (the array with 9 elements)
+          - the setSquares function tells React to re-render the changed components that use the squares state (Board)
+          as well as its child components which are the Square components that make up the grid.
+          - Right now, the only square that works is the top left one because we hard coded it. To solve this we could add a prop 'i' to handleClick(i)
+          however, this would turn into a dunction call of handleClick(i), which means setSquares is also called, and this function re-renders the board.
+          However, when you re-render the board, handleClick(i) will be called again. And this turns into an infinite loop. This did not happend before 
+          because we did not pass an argument to handClick. To work around this we can make use of () => the arrow function. If we update the Square components
+          <Square value={squares[i]} onSquareClick={() => handleClick(i)}/> now when the square is clicked, the code after => will be executed.
+    After making these changes, the board is able to display an X for each Square that is clicked just like before. The difference is that the state management 
+    is now handled by the Board component. It is good to be able to access the state of the Board, as this will allow us to determine a winner later on.
+    Additionally, by not directly mutating the squares array, we are able to store previous states of the game. This can be used to backtrack later on.
+
+    Incoorporating logic to take turns:
+    in order to alternate, we first need to set X to go first by default. We will keep track of this by adding another state to the Board component
+        const [xIsNext, setXIsNext] = useState(true);
+    Each time a player moves, we nee to toggle the value of xIsNext to know whose turn it is. We do this by updating the handleClick Board's function
+    function handleClick(i) {
+    const nextSquares = squares.slice();
+    if (xIsNext){           //logic to check whose turn it is
+      nextSquares[i] = "X"; //update the copy of board
+    } else{
+      nextSquares[i] = "O"; //if its not X's turn, place an 'O'
+    }
+    setSquares(nextSquares); //re render the board
+    setXIsNext(!xIsNext);   //toggle xIsNext, alternate turns
+    } 
+    This will allow you to change the Square's value depending on whose turn it is. However, if you click on a square that has already been taken,
+    the program can change it to something else. This is not what we want, so we can check for the truthy value of squares[i] in handleClick.
+    if (square[i]) {return;} if square[i] is anything other than null (its initial value), then the square is taken, so we return early, and not make changes.
+
+    Determining a winner winner chicken dinner:
+    Since players are able to take turns, now we can implement the logic that determines when there is a winner. To do so, we will add an extra function 
+    that takes in an array of 9 Squares (squares). We then check if the Board's state matches a winning state (a state with 3 symbols in line)
+    the possible winning states of the board are:
+    const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6]
+    ]; We will loop through this list of lists to check if the same piece appears 3 times in a row. If there is a symbol that meets this criteria, we return it.
+    if not, then we just return null:
+    for (let i = 0; i < lines.length(); i++) {
+    const [a, b, c] = lines[i];
+    if( squares[a] && squares[a] === squares[b] && squares[a] === squares[c]){
+      return squares[a];
+    }
+    }
+    return null;
+    In order to prevent more moves after there is a winner, we will update the first if statement in handleClick()
+    if (squares[i] || calculateWinner(squares)){  // if square is occupied or if there is already a winner, return early and do not make the move.
+      return;
+    }
+
+    Displaying turns and the winner then there is one:
+    Now that we can stop the game when there is a winner, we can also display whose turn it is and who the winner is. We will add this to the Board
+    function after we handle the click.
+    const winner = calculateWinner(squares); //get the winner
+    let status;     //variable to hold the message we will display
+    if (winner){    //if a winner has been determined (winner !== null)
+        status = "Winner: " + winner; //define the message to display
+    }
+    else {          //if there is no winner yet, display whose turn it currently is
+        status = "Next Move: " + (xIsNext ? "X" : "O");
+    }
+
+    We will also add the status message to the return statement of Board (inside a new div)
+    <div className='status'>{status}</div>
+    After doing this, your tic-tac-toe game should be fully functional. You also add a game history. We will leave that as HW.
+

@@ -1,0 +1,193 @@
+Starting out with regular tic-tac-toe refer to tic-tac-toe.txt
+We will make changes to the source code.
+
+Preventing players from placing more than 3 pieces each:
+  In order to do this, I added two state variables, const [countX, setCountX] = useState(0); and const [countY, setCountY] = useState(0);
+  both of them are initialized to zero. After that, I added another condition to each if statement, where we check if the player has placed
+  less than 3 pieces before performing the move. The if statement conditions look like this:
+  if (xIsNext && countX < 3) followed by the else if (!xIsNext && countO < 3). I also added a local boolean variable using let validMove = false
+  which gets updated to true if any of the previous two conditions is true (meaning the move is performed). 
+  
+  //source code, only added new state variables countO and countX and updated the logic of handleClick
+  const [xIsNext, setXIsNext] = useState(true);
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  const [countX, setCountX] = useState(0);
+  const [countO, setCountO] = useState(0);
+  
+
+  function handleClick(i) {
+    if (squares[i] || calculateWinner(squares)){
+      return;
+    }
+    const nextSquares = squares.slice();
+    let validMove = false;
+    if (xIsNext && countX < 3){
+      nextSquares[i] = "X";
+      setCountX(countX + 1);
+      validMove = true;
+    } else if (!xIsNext && countO < 3){
+      nextSquares[i] = "O";
+      setCountO(countO + 1);
+      validMove = true;
+    }
+    if (validMove){
+      setSquares(nextSquares);
+      setXIsNext(!xIsNext);
+    }
+  }
+
+Moving one of the 3 pieces
+  I will first try to move the pieces to any empty square when the player has placed all 3 pieces.
+  to do this, we will update the handleClick(i) function. Before I explain how this is done, I will explain what went wrong in the process.
+  At the beginning, I tried checking for regular moves first, and then check if the player has clicked on a square that has one of their pieces.
+  However, there were conditions such as if (squares[i] || calculateWinner(squares)){return;} that help determine if the move is valid or if there
+  is a winner. The problem with this, is that this condition was checked before checking if the player selected one of their pieces (to move it). 
+  if a player selected one of their pieces, then the if statement would evaluate to true, therefore exiting earlier than it should.
+  To fix this, I first check if (moves >= 3 && squares[i] === playerSymbol && selectedSquare === null) meaning there are 3 pieces of the same kind on the board,
+  the player selected a square that has one of their pieces, and the selectedSquare is null (its original value). If that is the case, we update selectedSquare
+  using 'setSelectedSquare(i);' 
+  New variables:
+    state variable selectedSquare -> initally set to null, it stores the index of the square selected by the player (it must contain one of their pieces)
+    const playerSymbol = xIsNext ? "X" : "O"; to determine the piece to be placed
+    const moves = xIsNext ? countX: countO; variable moves holds the number of pieces the player at turn has.
+  Approach:
+  first we allow selecting a piece for moving if the player has already placed 3 pieces. this is the first thing we check.
+  Then we check if (selectedSquare !== null && !calculateWinner(squares)) meaning the player is trying to move one of their pieces and ther is no winner yet.
+    if that is the case then we check if the target square is not empty or if selectedPiece is not theirs, if that is true, reset selectedSquare to null and return early.
+    if that is not the case, we delete the piece for the old square, move the piece to the new square, re-render the board, switch turns, and reset SelectedSquare to null.
+  If the above is not true, then the player has not yet placed three pieces, so we use if (squares[i] || calculateWinner(squares)) to prevent the move from being done (return early) 
+    if the new square already has a piece, or there is already a winner.
+  Then we check if the player has less than 3 pieces (this should be true based on the previous conditions)
+    if thats the case, we insert the new piece, re-render the board, and increment either countX or countO by 1 based on whose turn it is.
+  After adding this, the program prevents players from inserting more than 3 pieces, and lets them move one of their pieces to any empty square.
+
+//updated body section of Board function:
+  const [xIsNext, setXIsNext] = useState(true);
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  const [countX, setCountX] = useState(0);
+  const [countO, setCountO] = useState(0);
+  const [selectedSquare, setSelectedSquare] = useState(null);
+
+  function handleClick(i) {
+    const playerSymbol = xIsNext ? "X" : "O"; //determine piece to be placed
+    const moves = xIsNext ? countX : countO;  //determine the move's count used for logic based on the turn
+    
+    // Allow selecting a piece for moving if the player has already placed 3 pieces
+    if (moves >= 3 && squares[i] === playerSymbol && selectedSquare === null) {
+      setSelectedSquare(i);
+      return; // After selecting, exit the function to avoid placing a new piece or moving immediately
+    }
+  
+    if (selectedSquare !== null && !calculateWinner(squares)){
+      if (squares[i] || squares[selectedSquare] !== playerSymbol){ //if the target sqr is not empty or the selectedPiece is not theirs
+        setSelectedSquare(null); //deselect the empty square
+        return; //return early and do nothing
+      }
+      //move the piece to new empty position, delete where it was at
+      const nextSquares = squares.slice();
+      nextSquares[selectedSquare] = null;
+      nextSquares[i] = playerSymbol;
+      setSquares(nextSquares);
+      setXIsNext(!xIsNext);
+      setSelectedSquare(null); // Deselect the piece after moving
+      return;
+    }
+    
+    //if the square is not empty or there is already a winner
+    if (squares[i] || calculateWinner(squares)){
+      return;  //return early
+    }
+    //if the player at current turn has placed less than 3 pieces
+    if (moves < 3){
+      const nextSquares = squares.slice();
+      nextSquares[i] = playerSymbol;
+      setSquares(nextSquares);
+      if (xIsNext){
+        setCountX(countX + 1);
+      } else {
+        setCountO(countO + 1);
+      }
+      setXIsNext(!xIsNext);          
+    }
+  }
+
+Only moving a piece to a square that is adjacent to it and checking for center square logic:
+  First lets define a function isValidMove(prevIndex, targetIndex)
+    we can determine the row and column of both the prevIndex and the targetIndex by dividing the index by 3 for the row, and using the remainder for the column.
+    once that is determined, we take the absolute value of the difference between the prevRow - targetRow (same for the colummn)
+    finally, we return the truthy value of 'rowDiff <= 1 && colDiff <= 1' to account for any square adjacent to it.
+function isValidMoveDirection(prevIndex, targetIndex) {
+  const prevRow = Math.floor(prevIndex / 3);
+  const prevCol = prevIndex % 3;
+  const targetRow = Math.floor(targetIndex / 3);
+  const targetCol = targetIndex % 3;
+
+  const rowDiff = Math.abs(prevRow - targetRow);
+  const colDiff = Math.abs(prevCol - targetCol);
+
+  return rowDiff <= 1 && colDiff <= 1; // Allows adjacent moves including diagonals
+}
+  Now lets define the function that checks if the move vacates the middle square or results in a win. The comments should explain it.
+  function vacateCenterOrWin(playerSymbol, squares, selectedSquare, targetIndex){
+    if (squares[4] === playerSymbol){ //if the player is occupying the middle square
+      if (selectedSquare === 4 && targetIndex !== 4){
+        return true; //move is valid if they are vacating the middle square
+      }
+      const potentialSquares = squares.slice();
+      //simulate the move to check if it results on a win
+      potentialSquares[selectedSquare] = null; 
+      potentialSquares[targetIndex] = playerSymbol;
+      if (calculateWinner(potentialSquares)){ //simulating the move
+        return true;
+      }
+      return false; //move does not vacate the cente or does not result in a win
+    }
+    return true; //if the player is not occupying the middle square, all moves are valid
+  }
+ 
+  Incorporating these functions in handleClick function:
+  This is an easy step. All we have to do is check the condition 'if (isValidMoveDirection(selectedSquare, i) && vacateCenterOrWin(playerSymbol, squares, selectedSquare, i))'
+  and only move the piece to a new square if the above condition evaluates to true.
+  Here is the updated section:
+  if (selectedSquare !== null && !calculateWinner(squares)){
+      if (squares[i] || squares[selectedSquare] !== playerSymbol){ //if the target sqr is not empty or the selectedPiece is not theirs
+        setSelectedSquare(null); //deselect the empty square
+        return; //return early and do nothing
+      }
+      //Here we check using the previous functions
+      else if (isValidMoveDirection(selectedSquare, i) && vacateCenterOrWin(playerSymbol, squares, selectedSquare, i)){
+        //move the piece to new empty position, delete where it was at
+        const nextSquares = squares.slice();
+        nextSquares[selectedSquare] = null;
+        nextSquares[i] = playerSymbol;
+        setSquares(nextSquares);
+        setXIsNext(!xIsNext);
+        setSelectedSquare(null); // Deselect the piece after moving
+        return;
+      }
+  }
+  After running the command $ npm pack --dry-run I got these results that tell me the
+  files that would be included if i run the command npm pack:
+
+npm notice 
+npm notice   react.dev@0.0.0
+npm notice === Tarball Contents ===
+npm notice 9.7kB chorus-lapilli.txt
+npm notice 610B  package.json
+npm notice 218B  public/index.html
+npm notice 5.2kB src/App.js
+npm notice 256B  src/index.js
+npm notice 989B  src/styles.css
+npm notice 9.5kB test_chorus_lapilli.py
+npm notice 9.9kB titc-tac-toe.txt
+npm notice === Tarball Details ===
+npm notice name:          react.dev
+npm notice version:       0.0.0
+npm notice filename:      react.dev-0.0.0.tgz
+npm notice package size:  10.7 kB
+npm notice unpacked size: 36.3 kB
+npm notice shasum:        d8851be30ad6e0ff29720b5abae1b8d084bccb37
+npm notice integrity:     sha512-Bjmg5V+v/o1vQ[...]ISidwxH4TUSDw==
+npm notice total files:   8
+npm notice
+react.dev-0.0.0.tgz
